@@ -88,7 +88,7 @@
 </head>
 <body>
 
-<h1>🎬 请使用浏览器打开，避免微信内播放异常</h1>
+<h1>🎬 请勿相信视频中的广告</h1>
 
 <div class="video-container">
   <video id="video" playsinline webkit-playsinline preload="auto" poster="loading.jpg" controls></video>
@@ -108,15 +108,6 @@
 </div>
 
 <script>
-  // 微信环境检测提醒
-  function isWeChat() {
-    return /MicroMessenger/i.test(navigator.userAgent);
-  }
-
-  if (isWeChat()) {
-    alert("请点击右上角【...】选择『在浏览器中打开』以正常播放视频");
-  }
-
   const video = document.getElementById('video');
   const buttons = document.querySelectorAll('.video-button');
   const loadingOverlay = document.getElementById('loadingOverlay');
@@ -152,7 +143,7 @@
 
   function actuallyLoadSource(url, resumeTime, isM3U8) {
     showLoading();
-    const fullUrl = url + "?t=" + Math.random(); // 加随机参数，防止缓存识别
+    const fullUrl = url + "?t=" + Math.random(); // 加随机参数防识别
 
     if (isM3U8 && !isIOS() && typeof Hls !== 'undefined') {
       hls = new Hls();
