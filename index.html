@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>视频播放页</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 16px;
+      margin-bottom: 20px;
+      text-align: center;
+      opacity: 0.7;
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 90vw;
+    }
+    video {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      background: #000;
+    }
+    .loading-overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      color: white;
+      font-size: 14px;
+      pointer-events: none;
+    }
+    .spinner {
+      border: 4px solid rgba(255,255,255,0.2);
+      border-left-color: #00ff88;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .video-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+      gap: 10px;
+    }
+    .video-button {
+      padding: 10px 16px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      background-color: #333;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .video-button:hover {
+      background-color: #555;
+    }
+    .video-button.active {
+      background-color: #00c300;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+
+<h1>🎬 请使用浏览器打开，避免微信内播放异常</h1>
+
+<div class="video-container">
+  <video id="video" playsinline webkit-playsinline preload="auto" poster="loading.jpg" controls></video>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    正在加载视频...
+  </div>
+</div>
+
+<div class="video-list" id="videoList">
+  <button class="video-button" data-url="https://v2025.fhbbff.com/20250629/hA7itnUd/index.m3u8">视频01</button>
+  <button class="video-button" data-url="https://v2024.fhbbff.com/20241119/goljzkiM/index.m3u8">视频02</button>
+  <button class="video-button" data-url="https://v2025.fhbbff.com/20250418/zOPoJy9O/index.m3u8">视频03</button>
+  <button class="video-button" data-url="https://v2025.fhbbff.com/20250627/4gQwTkJm/index.m3u8">视频04</button>
+  <button class="video-button" data-url="https://v2025.fhbbff.com/20250616/NhxrHMf0/index.m3u8">视频05</button>
+  <button class="video-button" data-url="https://v2025.fhbbff.com/20250708/YHpwroXH/index.m3u8">视频06</button>
+</div>
+
+<script>
+  // 微信环境检测提醒
+  function isWeChat() {
+    return /MicroMessenger/i.test(navigator.userAgent);
+  }
+
+  if (isWeChat()) {
+    alert("请点击右上角【...】选择『在浏览器中打开』以正常播放视频");
+  }
+
+  const video = document.getElementById('video');
+  const buttons = document.querySelectorAll('.video-button');
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  let hls = null;
+  let saveInterval = null;
+
+  function isIOS() {
+    return /iP(hone|od|ad)/.test(navigator.userAgent);
+  }
+
+  function saveProgress(url, time) {
+    localStorage.setItem("progress_" + url, time.toFixed(1));
+  }
+
+  function loadProgress(url) {
+    const t = parseFloat(localStorage.getItem("progress_" + url));
+    return isNaN(t) ? 0 : t;
+  }
+
+  function setActiveButton(url) {
+    buttons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.url.trim() === url);
+    });
+  }
+
+  function showLoading() {
+    loadingOverlay.style.display = 'flex';
+  }
+
+  function hideLoading() {
+    loadingOverlay.style.display = 'none';
+  }
+
+  function actuallyLoadSource(url, resumeTime, isM3U8) {
+    showLoading();
+    const fullUrl = url + "?t=" + Math.random(); // 加随机参数，防止缓存识别
+
+    if (isM3U8 && !isIOS() && typeof Hls !== 'undefined') {
+      hls = new Hls();
+      hls.loadSource(fullUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.currentTime = resumeTime;
+        video.play().catch(() => {});
+      });
+    } else {
+      video.src = fullUrl;
+      video.addEventListener('loadedmetadata', function onLoaded() {
+        video.removeEventListener('loadedmetadata', onLoaded);
+        video.currentTime = resumeTime;
+        video.play().catch(() => {});
+      });
+    }
+
+    video.addEventListener('loadedmetadata', () => {
+      video.controls = true;
+    });
+
+    clearInterval(saveInterval);
+    saveInterval = setInterval(() => {
+      if (!video.paused && !video.ended) {
+        saveProgress(url, video.currentTime);
+      }
+    }, 3000);
+  }
+
+  function loadVideo(rawUrl) {
+    const url = rawUrl.trim();
+    const isM3U8 = url.includes(".m3u8");
+    const resumeTime = loadProgress(url);
+
+    showLoading();
+
+    video.pause();
+    video.removeAttribute('src');
+    video.removeAttribute('poster');
+    video.load();
+    video.currentTime = 0;
+    video.controls = false;
+
+    if (hls) {
+      hls.destroy();
+      hls = null;
+    }
+
+    setActiveButton(url);
+
+    setTimeout(() => {
+      actuallyLoadSource(url, resumeTime, isM3U8);
+    }, 100);
+  }
+
+  video.addEventListener('playing', hideLoading);
+  video.addEventListener('canplay', hideLoading);
+
+  const firstUrl = buttons[0].dataset.url.trim();
+  loadVideo(firstUrl);
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      loadVideo(btn.dataset.url.trim());
+    });
+  });
+</script>
+
+</body>
+</html>
