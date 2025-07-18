@@ -99,12 +99,12 @@
 </div>
 
 <div class="video-list" id="videoList">
-  <button class="video-button" data-url="https://v2025.fhbbff.com/20250629/hA7itnUd/index.m3u8">视频01</button>
-  <button class="video-button" data-url="https://v2024.fhbbff.com/20241119/goljzkiM/index.m3u8">视频02</button>
-  <button class="video-button" data-url="https://v2025.fhbbff.com/20250418/zOPoJy9O/index.m3u8">视频03</button>
-  <button class="video-button" data-url="https://v2025.fhbbff.com/20250627/4gQwTkJm/index.m3u8">视频04</button>
-  <button class="video-button" data-url="https://v2025.fhbbff.com/20250616/NhxrHMf0/index.m3u8">视频05</button>
-  <button class="video-button" data-url="https://v2025.fhbbff.com/20250708/YHpwroXH/index.m3u8">视频06</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNjI5L2hBN2l0blVkL2luZGV4Lm0zdTg=">视频01</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNC5maGJiZmYuY29tLzIwMjQxMTE5L2dvbGp6a2lNL2luZGV4Lm0zdTg=">视频02</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNDE4L3pPUG9KeTlPL2luZGV4Lm0zdTg=">视频03</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNjI3LzRnUXdUa0ptL2luZGV4Lm0zdTg=">视频04</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNjE2L052eHJITWYwL2luZGV4Lm0zdTg=">视频05</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNzA4L1lIcHdyb1hIL2luZGV4Lm0zdTg=">视频06</button>
 </div>
 
 <script>
@@ -127,9 +127,9 @@
     return isNaN(t) ? 0 : t;
   }
 
-  function setActiveButton(url) {
+  function setActiveButton(enc) {
     buttons.forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.url.trim() === url);
+      btn.classList.toggle('active', btn.dataset.enc.trim() === enc);
     });
   }
 
@@ -141,9 +141,18 @@
     loadingOverlay.style.display = 'none';
   }
 
+  function decodeBase64(str) {
+    try {
+      return atob(str);
+    } catch (e) {
+      alert("视频地址解码失败");
+      return "";
+    }
+  }
+
   function actuallyLoadSource(url, resumeTime, isM3U8) {
     showLoading();
-    const fullUrl = url + "?t=" + Math.random(); // 加随机参数防识别
+    const fullUrl = url + "?t=" + Math.random();
 
     if (isM3U8 && !isIOS() && typeof Hls !== 'undefined') {
       hls = new Hls();
@@ -174,8 +183,10 @@
     }, 3000);
   }
 
-  function loadVideo(rawUrl) {
-    const url = rawUrl.trim();
+  function loadVideoFromEncoded(encStr) {
+    const url = decodeBase64(encStr.trim());
+    if (!url) return;
+
     const isM3U8 = url.includes(".m3u8");
     const resumeTime = loadProgress(url);
 
@@ -193,7 +204,7 @@
       hls = null;
     }
 
-    setActiveButton(url);
+    setActiveButton(encStr);
 
     setTimeout(() => {
       actuallyLoadSource(url, resumeTime, isM3U8);
@@ -203,12 +214,12 @@
   video.addEventListener('playing', hideLoading);
   video.addEventListener('canplay', hideLoading);
 
-  const firstUrl = buttons[0].dataset.url.trim();
-  loadVideo(firstUrl);
+  const firstEnc = buttons[0].dataset.enc.trim();
+  loadVideoFromEncoded(firstEnc);
 
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
-      loadVideo(btn.dataset.url.trim());
+      loadVideoFromEncoded(btn.dataset.enc.trim());
     });
   });
 </script>
