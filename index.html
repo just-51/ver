@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>视频播放页</title>
+  <title>hello</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * { box-sizing: border-box; }
@@ -99,12 +99,12 @@
 </div>
 
 <div class="video-list" id="videoList">
-  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNjI5L2hBN2l0blVkL2luZGV4Lm0zdTg=">成宮はるあ特辑</button>
-  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNC5maGJiZmYuY29tLzIwMjQxMTE5L2dvbGp6a2lNL2luZGV4Lm0zdTg=">两个辣妹</button>
-  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNDE4L3pPUG9KeTlPL2luZGV4Lm0zdTg=">新人一夏</button>
-  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNjI3LzRnUXdUa0ptL2luZGV4Lm0zdTg=">絶え間なく高樹 か</button>
-  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNjE2L052eHJITWYwL2luZGV4Lm0zdTg=">絕密珍藏</button>
-  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNzA4L1lIcHdyb1hIL2luZGV4Lm0zdTg=">前列腺開發體驗</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNjI5L2hBN2l0blVkL2luZGV4Lm0zdTg=">视频1</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNC5maGJiZmYuY29tLzIwMjQxMTE5L2dvbGp6a2lNL2luZGV4Lm0zdTg=">视频2</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNDE4L3pPUG9KeTlPL2luZGV4Lm0zdTg=">视频3</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNjI3LzRnUXdUa0ptL2luZGV4Lm0zdTg=">视频4</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNjE2L052eHJITWYwL2luZGV4Lm0zdTg=">视频5</button>
+  <button class="video-button" data-enc="aHR0cHM6Ly92MjAyNS5maGJiZmYuY29tLzIwMjUwNzA4L1lIcHdyb1hIL2luZGV4Lm0zdTg=">视频6</button>
 </div>
 
 <script>
@@ -113,17 +113,21 @@
   const loadingOverlay = document.getElementById('loadingOverlay');
   let hls = null;
   let saveInterval = null;
+  let currentUrl = "";
 
   function isIOS() {
     return /iP(hone|od|ad)/.test(navigator.userAgent);
   }
 
+  // 保存进度
   function saveProgress(url, time) {
-    localStorage.setItem("progress_" + url, time.toFixed(1));
+    localStorage.setItem("progress_" + btoa(url), time.toFixed(1));
   }
 
+  // 读取进度
   function loadProgress(url) {
-    const t = parseFloat(localStorage.getItem("progress_" + url));
+    if (!url) return 0;
+    const t = parseFloat(localStorage.getItem("progress_" + btoa(url)));
     return isNaN(t) ? 0 : t;
   }
 
@@ -152,28 +156,24 @@
 
   function actuallyLoadSource(url, resumeTime, isM3U8) {
     showLoading();
-    const fullUrl = url + "?t=" + Math.random();
+    currentUrl = url;
 
     if (isM3U8 && !isIOS() && typeof Hls !== 'undefined') {
       hls = new Hls();
-      hls.loadSource(fullUrl);
+      hls.loadSource(url);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         video.currentTime = resumeTime;
         video.play().catch(() => {});
       });
     } else {
-      video.src = fullUrl;
+      video.src = url;
       video.addEventListener('loadedmetadata', function onLoaded() {
         video.removeEventListener('loadedmetadata', onLoaded);
         video.currentTime = resumeTime;
         video.play().catch(() => {});
       });
     }
-
-    video.addEventListener('loadedmetadata', () => {
-      video.controls = true;
-    });
 
     clearInterval(saveInterval);
     saveInterval = setInterval(() => {
@@ -194,7 +194,6 @@
 
     video.pause();
     video.removeAttribute('src');
-    video.removeAttribute('poster');
     video.load();
     video.currentTime = 0;
     video.controls = false;
@@ -214,13 +213,25 @@
   video.addEventListener('playing', hideLoading);
   video.addEventListener('canplay', hideLoading);
 
+  // 默认加载第一个视频
   const firstEnc = buttons[0].dataset.enc.trim();
   loadVideoFromEncoded(firstEnc);
 
+  // 切换视频时先保存当前进度，再加载新视频
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
+      if (currentUrl) {
+        saveProgress(currentUrl, video.currentTime);
+      }
       loadVideoFromEncoded(btn.dataset.enc.trim());
     });
+  });
+
+  // 页面关闭时保存进度
+  window.addEventListener("beforeunload", () => {
+    if (currentUrl) {
+      saveProgress(currentUrl, video.currentTime);
+    }
   });
 </script>
 
